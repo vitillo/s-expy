@@ -7,14 +7,16 @@
   (insta/parser
     "Program     = Form*
     <Form>       = Expression
-    <Expression> = (Let / Constant / Symbol / Application)
+    <Expression> = (Let / If / Constant / Symbol / Application)
     Let          = Lparen <'let'> Bindings Expression+ Rparen
+    If           = Lparen <'if'> Expression Expression Expression Rparen
     Bindings     = Lparen Binding* Rparen
     <Binding>    = Symbol Expression
-    <Constant>   = Number
+    <Constant>   = Number | Boolean
     Application  = Lparen Expression+ Rparen
     Symbol       = Space* #'[\\pL_$&/+~:<>|§?*-][\\pL\\p{Digit}_$&/+~.:<>|§?*-]*' Space*
     Number       = Space* #'[0-9]+' Space*
+    Boolean      = Space* ('true' | 'false') Space*
     <Lparen>     = Space* <'('> Space*
     <Rparen>     = Space* <')'> Space*
     <Space>      = <#'\\s*'>"))
@@ -23,6 +25,11 @@
                         '- -
                         '/ /
                         '* *
+                        '> >
+                        '< <
+                        '= =
+                        '>= >=
+                        '<= <=
                         'square ['x [:Application  [:Symbol "*"]  [:Symbol "x"]  [:Symbol "x"]]]})
 
 (declare interp-eval)
@@ -51,6 +58,12 @@
       (let [new-env (interp-eval env (fnext tree))]
         (interp-eval new-env (last tree)))
 
+      :If
+      (let [condition (interp-eval env (second tree))
+            then (interp-eval env (nth tree 2))
+            else (interp-eval env (nth tree 3))]
+        (if condition then else))
+
       :Bindings
       (let [bindings (apply hash-map (map-indexed #(if (= 0 (rem %1 2))
                                                      ((comp symbol second) %2)
@@ -63,7 +76,11 @@
         ((comp env symbol) (second tree)))
 
       :Number
-      (Integer/parseInt (second tree)))))
+      (Integer/parseInt (second tree))
+
+      :Boolean
+      (Boolean/parseBoolean (second tree)))))
+
 
 (defn interp [expression]
   (let [ast (parse expression)]

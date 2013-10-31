@@ -18,9 +18,15 @@
           (it "parses calls to user-defined functions"
               (should-not-contain :index (pret (parse "(square 4)"))))
           (it "parses let bindings"
-              (should-not-contain :index (pret (parse "(let (x 4) (square 4))")))))
+              (should-not-contain :index (pret (parse "(let (x 4) (square 4))"))))
+          (it "parses a boolean constant"
+              (should-not-contain :index (pret (parse "true false"))))
+          (it "parses an if expression"
+              (should-not-contain :index (pret (parse "(if true true false)")))))
 
 (describe "Interpreter"
+          (it "evaluates booleans"
+              (should (= true (interp "true"))))
           (it "evaluates defined symbols"
               (should (= 5 (interp "(+ 2 3)"))))
           (it "evaluates arithmetic expressions"
@@ -28,6 +34,8 @@
           (it "allows to call functions"
               (should (= 16 (interp "(square 4)"))))
           (it "allows to create bindings"
-              (should (= 5 (interp "(let (x 3) (+ x 2))")))))
+              (should (= 5 (interp "(let (x 3) (+ x 2))"))))
+          (it "evaluates if expressions"
+              (should (= true (interp "(if (> 5 3) true false)")))))
 
 (run-specs)
