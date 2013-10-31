@@ -12,10 +12,10 @@
     Formals      = Lparen Symbol* Rparen
     If           = Lparen <'if'> Expression Expression Expression Rparen
     Let          = Lparen <'let'> Bindings Expression+ Rparen
+    Application  = Lparen Expression+ Rparen
     Bindings     = Lparen Binding* Rparen
     <Binding>    = Symbol Expression
     <Constant>   = Number | Boolean
-    Application  = Lparen Expression+ Rparen
     Symbol       = Space* #'[\\pL_$&/+~:<>|§?*-][\\pL\\p{Digit}_$&/+~.:<>|§?*-]*' Space*
     Number       = Space* #'[0-9]+' Space*
     Boolean      = Space* ('true' | 'false') Space*
@@ -78,8 +78,7 @@
         (merge env bindings))
 
       :Symbol
-      (do
-        ((comp env symbol) (second tree)))
+      ((comp env symbol) (second tree))
 
       :Number
       (Integer/parseInt (second tree))
@@ -91,5 +90,3 @@
 (defn interp [expression]
   (let [ast (parse expression)]
     (interp-eval top-env ast)))
-
-(pprint (interp "(fn (x) (* x x))"))
