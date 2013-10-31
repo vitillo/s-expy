@@ -7,9 +7,11 @@
   (insta/parser
     "Program     = Form*
     <Form>       = Expression
-    <Expression> = (Let / If / Constant / Symbol / Application)
-    Let          = Lparen <'let'> Bindings Expression+ Rparen
+    <Expression> = (Let / If / Lambda / Constant / Symbol / Application)
+    Lambda       = Lparen <'fn'> Formals Expression+ Rparen
+    Formals      = Lparen Symbol* Rparen
     If           = Lparen <'if'> Expression Expression Expression Rparen
+    Let          = Lparen <'let'> Bindings Expression+ Rparen
     Bindings     = Lparen Binding* Rparen
     <Binding>    = Symbol Expression
     <Constant>   = Number | Boolean
@@ -30,14 +32,15 @@
                         '= =
                         '>= >=
                         '<= <=
-                        'square ['x [:Application  [:Symbol "*"]  [:Symbol "x"]  [:Symbol "x"]]]})
+                        'not not})
+
 
 (declare interp-eval)
 
-(defn- interp-apply [env fun arg]
-  (let [param (first fun)
-        body (second fun)
-        env (merge top-env {param (first arg)})]
+(defn- interp-apply [env fun actuals]
+  (let [formals (map (comp symbol second) (rest (second fun)))
+        body (last fun)
+        env (merge top-env (apply hash-map (interleave formals actuals)))]
     (interp-eval env body)))
 
 (defn- interp-eval [env tree]
@@ -53,6 +56,9 @@
         (if (and (ifn? operator) (not (coll? operator)))
           (apply operator arguments) ;apply builtin
           (interp-apply env operator arguments)))
+
+      :Lambda
+      tree
 
       :Let
       (let [new-env (interp-eval env (fnext tree))]
@@ -85,3 +91,5 @@
 (defn interp [expression]
   (let [ast (parse expression)]
     (interp-eval top-env ast)))
+
+(pprint (interp "(fn (x) (* x x))"))

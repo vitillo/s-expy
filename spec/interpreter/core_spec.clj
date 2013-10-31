@@ -15,14 +15,14 @@
               (should-not-contain :index (pret (parse " ( +  10  2  ( / 10 2) (* 2 5 ) (- 8 3))"))))
           (it "parses arithmetic expressions on integers"
               (should-not-contain :index (pret (parse "(+ 10 2 (/ 10 2) (* 2 5) (- 8 3))"))))
-          (it "parses calls to user-defined functions"
-              (should-not-contain :index (pret (parse "(square 4)"))))
           (it "parses let bindings"
-              (should-not-contain :index (pret (parse "(let (x 4) (square 4))"))))
+              (should-not-contain :index (pret (parse "(let (x 4) (+ x 4))"))))
           (it "parses a boolean constant"
               (should-not-contain :index (pret (parse "true false"))))
           (it "parses an if expression"
-              (should-not-contain :index (pret (parse "(if true true false)")))))
+              (should-not-contain :index (pret (parse "(if true true false)"))))
+          (it "parses a lambda expression"
+              (should-not-contain :index (pret (parse "(fn (x) (* x x))")))))
 
 (describe "Interpreter"
           (it "evaluates booleans"
@@ -31,11 +31,13 @@
               (should (= 5 (interp "(+ 2 3)"))))
           (it "evaluates arithmetic expressions"
               (should (= 30 (interp "(+ 10 (/ 10 2) (* 2 5) (- 8 3))"))))
-          (it "allows to call functions"
-              (should (= 16 (interp "(square 4)"))))
           (it "allows to create bindings"
               (should (= 5 (interp "(let (x 3) (+ x 2))"))))
           (it "evaluates if expressions"
-              (should (= true (interp "(if (> 5 3) true false)")))))
+              (should (= true (interp "(if (> 5 3) true false)"))))
+          (it "evaluates lambda expressions"
+              (should-contain :Lambda (interp "(fn (x) (* x x))")))
+          (it "evaluates calls to immediate functions"
+              (should (= 4 (interp "((fn (x) (* x x)) 2)")))))
 
 (run-specs)
