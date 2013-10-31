@@ -39,8 +39,8 @@
 
 (defn- interp-apply [env fun actuals]
   (let [formals (map (comp symbol second) (rest (second fun)))
-        body (last fun)
-        env (merge top-env (apply hash-map (interleave formals actuals)))]
+        body (second (rseq fun))
+        env (merge (second (peek fun)) (apply hash-map (interleave formals actuals)))]
     (interp-eval env body)))
 
 (defn- interp-eval [env tree]
@@ -58,11 +58,11 @@
           (interp-apply env operator arguments)))
 
       :Lambda
-      tree
+      (conj tree [:Env env])
 
       :Let
       (let [new-env (interp-eval env (fnext tree))]
-        (interp-eval new-env (last tree)))
+        (interp-eval new-env (peek tree)))
 
       :If
       (let [condition (interp-eval env (second tree))

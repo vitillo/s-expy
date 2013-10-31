@@ -38,6 +38,8 @@
           (it "evaluates lambda expressions"
               (should-contain :Lambda (interp "(fn (x) (* x x))")))
           (it "evaluates calls to immediate functions"
-              (should (= 4 (interp "((fn (x) (* x x)) 2)")))))
+              (should (= 4 (interp "((fn (x) (* x x)) 2)"))))
+          (it "evaluates closures"
+              (should (= 9 (interp "((let (x 3) (fn () (* x x))))")))))
 
 (run-specs)
