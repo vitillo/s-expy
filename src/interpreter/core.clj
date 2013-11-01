@@ -8,10 +8,10 @@
     "Program     = Form*
     <Form>       = Expression
     <Expression> = (Let / If / Lambda / Constant / Symbol / Application)
-    Lambda       = Lparen <'fn'> Formals Expression+ Rparen
+    Lambda       = Lparen <'fn'> Formals Expression Rparen
     Formals      = Lparen Symbol* Rparen
     If           = Lparen <'if'> Expression Expression Expression Rparen
-    Let          = Lparen <'let'> Bindings Expression+ Rparen
+    Let          = Lparen <'let'> Bindings Expression Rparen
     Application  = Lparen Expression+ Rparen
     Bindings     = Lparen Binding* Rparen
     <Binding>    = Symbol Expression
@@ -43,16 +43,17 @@
         env (merge (second (peek fun)) (apply hash-map (interleave formals actuals)))]
     (interp-eval env body)))
 
-(defn- interp-eval [env tree]
+(defn- interp-eval [env [tag & body :as tree]]
   (let [eval-par (partial interp-eval env)
         eval-map (partial map eval-par)]
-    (case (first tree)
+
+    (case tag
       :Program
-      (interp-eval env (second tree))
+      (interp-eval env (tree 1))
 
       :Application
-      (let [operator (interp-eval env (second tree))
-            arguments (eval-map (nnext tree))]
+      (let [operator (interp-eval env (tree 1))
+            arguments (eval-map (subvec tree 2))]
         (if (and (ifn? operator) (not (coll? operator)))
           (apply operator arguments) ;apply builtin
           (interp-apply env operator arguments)))
@@ -61,30 +62,31 @@
       (conj tree [:Env env])
 
       :Let
-      (let [new-env (interp-eval env (fnext tree))]
+      (let [new-env (interp-eval env (tree 1))]
         (interp-eval new-env (peek tree)))
 
       :If
-      (let [condition (interp-eval env (second tree))
-            then (interp-eval env (nth tree 2))
-            else (interp-eval env (nth tree 3))]
+      (let [condition (interp-eval env (tree 1))
+            then (interp-eval env (tree 2))
+            else (interp-eval env (tree 3))]
         (if condition then else))
 
       :Bindings
-      (let [bindings (apply hash-map (map-indexed #(if (= 0 (rem %1 2))
-                                                     ((comp symbol second) %2)
-                                                     (interp-eval env %2))
-                                                  (rest tree)))]
+      (let [extract #(if (zero? (mod %1 2))
+                       (symbol (%2 1))
+                       (interp-eval env %2))
+            bindings (apply hash-map (map-indexed extract body))]
+        (println body)
         (merge env bindings))
 
       :Symbol
-      ((comp env symbol) (second tree))
+      ((comp env symbol) (tree 1))
 
       :Number
-      (Integer/parseInt (second tree))
+      (Integer/parseInt (tree 1))
 
       :Boolean
-      (Boolean/parseBoolean (second tree)))))
+      (Boolean/parseBoolean (tree 1)))))
 
 
 (defn interp [expression]
