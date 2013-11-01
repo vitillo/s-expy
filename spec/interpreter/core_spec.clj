@@ -17,12 +17,14 @@
               (should-not-contain :index (pret (parse "(+ 10 2 (/ 10 2) (* 2 5) (- 8 3))"))))
           (it "parses let bindings"
               (should-not-contain :index (pret (parse "(let (x 4) (+ x 4))"))))
-          (it "parses a boolean constant"
+          (it "parses boolean constants"
               (should-not-contain :index (pret (parse "true false"))))
-          (it "parses an if expression"
+          (it "parses if expressions"
               (should-not-contain :index (pret (parse "(if true true false)"))))
-          (it "parses a lambda expression"
-              (should-not-contain :index (pret (parse "(fn (x) (* x x))")))))
+          (it "parses lambda expressions"
+              (should-not-contain :index (pret (parse "(fn (x) (* x x))"))))
+          (it "parses set! expressions"
+              (should-not-contain :index (pret (parse "(let (x 3) (set! x 4))")))))
 
 (describe "Interpreter"
           (it "evaluates booleans"
@@ -40,6 +42,8 @@
           (it "evaluates calls to immediate functions"
               (should (= 4 (interp "((fn (x) (* x x)) 2)"))))
           (it "evaluates closures"
-              (should (= 9 (interp "((let (x 3) (fn () (* x x))))")))))
+              (should (= 9 (interp "((let (x 3) (fn () (* x x))))"))))
+          (it "evaluates set! expressions"
+              (should (= 4 (interp "(let (x 3) (set! x 4))")))))
 
 (run-specs)

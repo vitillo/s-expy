@@ -7,10 +7,11 @@
   (insta/parser
     "Program     = Form*
     <Form>       = Expression
-    <Expression> = (Let / If / Lambda / Constant / Symbol / Application)
+    <Expression> = (Let / If / Set / Lambda / Constant / Symbol / Application)
     Lambda       = Lparen <'fn'> Formals Expression Rparen
     Formals      = Lparen Symbol* Rparen
     If           = Lparen <'if'> Expression Expression Expression Rparen
+    Set          = Lparen <'set!'> Symbol Expression Rparen
     Let          = Lparen <'let'> Bindings Expression Rparen
     Application  = Lparen Expression+ Rparen
     Bindings     = Lparen Binding* Rparen
@@ -23,24 +24,43 @@
     <Rparen>     = Space* <')'> Space*
     <Space>      = <#'\\s*'>"))
 
-(def ^:private top-env {'+ +
-                        '- -
-                        '/ /
-                        '* *
-                        '> >
-                        '< <
-                        '= =
-                        '>= >=
-                        '<= <=
-                        'not not})
+(defn- env-create
+  ([bindings]
+   (atom (conj bindings {:outer nil})))
+  ([bindings outer]
+   (atom (conj bindings {:outer outer}))))
 
+(defn- env-find [env key]
+  (if (= @env nil)
+    nil
+    (or (@env key) (env-find (@env :outer) key))))
+
+(defn- env-update [env key value]
+  (cond
+    (= @env nil) nil
+    (@env key) (swap! env #(conj % {key value}))
+    :else (env-update (@env :outer) key value)))
+
+(def ^:private top-env
+  (env-create {'+ +
+               '- -
+               '/ /
+               '* *
+               '> >
+               '< <
+               '= =
+               '>= >=
+               '<= <=
+               'not not}))
 
 (declare interp-eval)
 
 (defn- interp-apply [env fun actuals]
   (let [formals (map (comp symbol second) (rest (second fun)))
         body (second (rseq fun))
-        env (merge (second (peek fun)) (apply hash-map (interleave formals actuals)))]
+        env (env-create (apply hash-map (interleave formals actuals))
+                        (second (peek fun)))
+        ]
     (interp-eval env body)))
 
 (defn- interp-eval [env [tag & body :as tree]]
@@ -71,16 +91,21 @@
             else (interp-eval env (tree 3))]
         (if condition then else))
 
+      :Set
+      (let [sym (symbol (get-in tree [1 1]))
+            val (interp-eval env (tree 2))]
+        (env-update env sym val)
+        val)
+
       :Bindings
       (let [extract #(if (zero? (mod %1 2))
                        (symbol (%2 1))
                        (interp-eval env %2))
             bindings (apply hash-map (map-indexed extract body))]
-        (println body)
-        (merge env bindings))
+        (env-create bindings env))
 
       :Symbol
-      ((comp env symbol) (tree 1))
+      (env-find env (symbol (tree 1)))
 
       :Number
       (Integer/parseInt (tree 1))
