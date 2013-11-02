@@ -7,11 +7,13 @@
   (insta/parser
     "Program     = Form*
     <Form>       = Expression
-    <Expression> = (Let / If / Set / Lambda / Constant / Symbol / Application)
+    <Expression> = (Let / If / Set / Define / Begin / Lambda / Constant / Symbol / Application)
     Lambda       = Lparen <'fn'> Formals Expression Rparen
     Formals      = Lparen Symbol* Rparen
     If           = Lparen <'if'> Expression Expression Expression Rparen
     Set          = Lparen <'set!'> Symbol Expression Rparen
+    Define       = Lparen <'define'> Symbol Expression Rparen
+    Begin        = Lparen <'begin'> Expression+ Rparen
     Let          = Lparen <'let'> Bindings Expression Rparen
     Application  = Lparen Expression+ Rparen
     Bindings     = Lparen Binding* Rparen
@@ -31,15 +33,18 @@
    (atom (conj bindings {:outer outer}))))
 
 (defn- env-find [env key]
-  (if (= @env nil)
+  (if (= env nil)
     nil
     (or (@env key) (env-find (@env :outer) key))))
 
 (defn- env-update [env key value]
   (cond
-    (= @env nil) nil
+    (= env nil) nil
     (@env key) (swap! env #(conj % {key value}))
     :else (env-update (@env :outer) key value)))
+
+(defn- env-define [env key value]
+  (swap! env #(conj % {key value})))
 
 (def ^:private top-env
   (env-create {'+ +
@@ -59,8 +64,7 @@
   (let [formals (map (comp symbol second) (rest (second fun)))
         body (second (rseq fun))
         env (env-create (apply hash-map (interleave formals actuals))
-                        (second (peek fun)))
-        ]
+                        (second (peek fun)))]
     (interp-eval env body)))
 
 (defn- interp-eval [env [tag & body :as tree]]
@@ -85,6 +89,10 @@
       (let [new-env (interp-eval env (tree 1))]
         (interp-eval new-env (peek tree)))
 
+      :Begin
+      (let [values (map (partial interp-eval env) (subvec tree 1))]
+        (last values))
+
       :If
       (let [condition (interp-eval env (tree 1))
             then (interp-eval env (tree 2))
@@ -93,9 +101,14 @@
 
       :Set
       (let [sym (symbol (get-in tree [1 1]))
-            val (interp-eval env (tree 2))]
-        (env-update env sym val)
-        val)
+            value (interp-eval env (tree 2))]
+        (env-update env sym value)
+        value)
+
+      :Define
+      (let [value (interp-eval env (tree 2))]
+        (env-define env (symbol (get-in tree [1 1])) value)
+        value)
 
       :Bindings
       (let [extract #(if (zero? (mod %1 2))

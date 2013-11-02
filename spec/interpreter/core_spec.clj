@@ -24,7 +24,11 @@
           (it "parses lambda expressions"
               (should-not-contain :index (pret (parse "(fn (x) (* x x))"))))
           (it "parses set! expressions"
-              (should-not-contain :index (pret (parse "(let (x 3) (set! x 4))")))))
+              (should-not-contain :index (pret (parse "(let (x 3) (set! x 4))"))))
+          (it "parses begin expressions"
+              (should-not-contain :index (pret (parse "(begin (+ 3 3) (+ 2 2))"))))
+          (it "parses define expressions"
+              (should-not-contain :index (pret (parse "(define foo 42)")))))
 
 (describe "Interpreter"
           (it "evaluates booleans"
@@ -44,6 +48,10 @@
           (it "evaluates closures"
               (should (= 9 (interp "((let (x 3) (fn () (* x x))))"))))
           (it "evaluates set! expressions"
-              (should (= 4 (interp "(let (x 3) (set! x 4))")))))
+              (should (= 4 (interp "(let (x 3) (set! x 4))"))))
+          (it "evaluates begin expressions"
+              (should (= 4 (interp "(begin (+ 3 3) (+ 2 2))"))))
+          (it "evaluates define expressions"
+              (should (= 42 (interp "(begin (define foo 42) foo)")))))
 
 (run-specs)
