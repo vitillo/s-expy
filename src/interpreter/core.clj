@@ -124,8 +124,6 @@
       :Boolean
       (Boolean/parseBoolean (tree 1)))))
 
-(use 'clojure.tools.trace)
-
 (defn ^:dynamic interp [expression]
   (let [ast (parse expression)]
     (interp-eval top-env ast)))
