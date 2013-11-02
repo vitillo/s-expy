@@ -65,7 +65,7 @@
                         (second (peek fun)))]
     (interp-eval env body)))
 
-(defn ^:dynamic interp-eval [env [tag & body :as tree]]
+(defn- interp-eval [env [tag & body :as tree]]
   (let [eval-par (partial interp-eval env)
         eval-map (partial map eval-par)]
 
@@ -124,6 +124,6 @@
       :Boolean
       (Boolean/parseBoolean (tree 1)))))
 
-(defn ^:dynamic interp [expression]
+(defn interp [expression]
   (let [ast (parse expression)]
     (interp-eval top-env ast)))
