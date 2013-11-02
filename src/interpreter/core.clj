@@ -1,7 +1,5 @@
 (ns interpreter.core
-  (:require [instaparse.core :as insta]
-            [clojure.pprint :refer :all]
-            [clojure.repl :refer :all]))
+  (:require [instaparse.core :as insta]))
 
 (def parse
   (insta/parser
@@ -19,7 +17,7 @@
     Bindings     = Lparen Binding* Rparen
     <Binding>    = Symbol Expression
     <Constant>   = Number | Boolean
-    Symbol       = Space* #'[\\pL_$&/+~:<>|§?*-][\\pL\\p{Digit}_$&/+~.:<>|§?*-]*' Space*
+    Symbol       = Space* #'[\\pL_$&/=+~:<>|§?*-][\\pL\\p{Digit}_$&/=+~.:<>|§?*-]*' Space*
     Number       = Space* #'[0-9]+' Space*
     Boolean      = Space* ('true' | 'false') Space*
     <Lparen>     = Space* <'('> Space*
@@ -67,7 +65,7 @@
                         (second (peek fun)))]
     (interp-eval env body)))
 
-(defn- interp-eval [env [tag & body :as tree]]
+(defn ^:dynamic interp-eval [env [tag & body :as tree]]
   (let [eval-par (partial interp-eval env)
         eval-map (partial map eval-par)]
 
@@ -94,10 +92,10 @@
         (last values))
 
       :If
-      (let [condition (interp-eval env (tree 1))
-            then (interp-eval env (tree 2))
-            else (interp-eval env (tree 3))]
-        (if condition then else))
+      (let [condition (interp-eval env (tree 1))]
+        (if condition
+          (interp-eval env (tree 2))
+          (interp-eval env (tree 3))))
 
       :Set
       (let [sym (symbol (get-in tree [1 1]))
@@ -126,7 +124,8 @@
       :Boolean
       (Boolean/parseBoolean (tree 1)))))
 
+(use 'clojure.tools.trace)
 
-(defn interp [expression]
+(defn ^:dynamic interp [expression]
   (let [ast (parse expression)]
     (interp-eval top-env ast)))

@@ -52,6 +52,8 @@
           (it "evaluates begin expressions"
               (should (= 4 (interp "(begin (+ 3 3) (+ 2 2))"))))
           (it "evaluates define expressions"
-              (should (= 42 (interp "(begin (define foo 42) foo)")))))
+              (should (= 42 (interp "(begin (define foo 42) foo)"))))
+          (it "evaluates recursive functions"
+              (should (= 120 (interp "(begin (define fact (fn (n) (if (<= n 1) 1 (* n (fact (- n 1)))))) (fact 5))")))))
 
 (run-specs)
